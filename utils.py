@@ -1,18 +1,5 @@
 import torch
 
-def extract_morse(mel, energy_percentile=95):
-    mel = mel.clone()
-
-    energy_t = mel.max(dim=0).values  # [T]
-
-    threshold = torch.quantile(energy_t, energy_percentile / 100.0)
-
-    time_mask = energy_t >= threshold  # [T]
-
-    mel[:, ~time_mask] = 0.0
-
-    return mel
-
 def normalize_nonzero(spec):
     energy = spec.mean(dim=1).squeeze(0)
     mask = energy > -80

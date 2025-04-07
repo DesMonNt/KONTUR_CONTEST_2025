@@ -1,26 +1,35 @@
 import os
 import torch
 import torch.nn as nn
-from early_stopping import EarlyStopping
 from torch.optim import Adam
+from torch.optim.lr_scheduler import LambdaLR
+from early_stopping import EarlyStopping
+from torch.nn.functional import log_softmax
 from tqdm import tqdm
 
 
-def train_one_epoch(model, loader, criterion, optimizer, device, epoch):
+def get_warmup_scheduler(optimizer, warmup_steps=500):
+    def lr_lambda(step):
+        return min(1.0, step / warmup_steps)
+
+    return LambdaLR(optimizer, lr_lambda)
+
+def train_one_epoch(model, loader, criterion, optimizer, scheduler, device, epoch):
     model.train()
     running_loss = 0.0
 
     for features, targets, input_lengths, target_lengths in tqdm(loader, desc=f"[Epoch {epoch}] Train", leave=False):
         features, targets = features.to(device), targets.to(device)
 
-        logits = model(features)
-        log_probs = nn.functional.log_softmax(logits, dim=-1)
+        logits = model(features, input_lengths.to(device))
+        log_probs = log_softmax(logits, dim=-1)
 
         loss = criterion(log_probs, targets, input_lengths, target_lengths)
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        scheduler.step()
 
         running_loss += loss.item()
 
@@ -35,8 +44,8 @@ def validate(model, loader, criterion, device, epoch):
         for features, targets, input_lengths, target_lengths in tqdm(loader, desc=f"[Epoch {epoch}] Val", leave=False):
             features, targets = features.to(device), targets.to(device)
 
-            logits = model(features)
-            log_probs = nn.functional.log_softmax(logits, dim=-1)
+            logits = model(features, input_lengths.to(device))
+            log_probs = log_softmax(logits, dim=-1)
 
             loss = criterion(log_probs, targets, input_lengths, target_lengths)
             val_loss += loss.item()
@@ -44,20 +53,24 @@ def validate(model, loader, criterion, device, epoch):
     return val_loss / len(loader)
 
 
-def train(model, train_loader, val_loader, num_epochs=100, lr=1e-3, device='cuda', save_path='models'):
+def train(model, train_loader, val_loader, num_epochs=100, lr=1e-3, warmup_steps=500, patience=10, device='cuda', save_path='models'):
     os.makedirs(save_path, exist_ok=True)
 
     model = model.to(device)
     optimizer = Adam(model.parameters(), lr=lr)
+    scheduler = get_warmup_scheduler(optimizer, warmup_steps=warmup_steps)
     criterion = nn.CTCLoss(blank=0, zero_infinity=True)
 
-    early_stopper = EarlyStopping(patience=10, save_path=os.path.join(save_path, 'best_model.pt'))
+    early_stopper = EarlyStopping(patience=patience, save_path=os.path.join(save_path, 'best_model.pt'))
 
     for epoch in range(1, num_epochs + 1):
-        _ = train_one_epoch(model, train_loader, criterion, optimizer, device, epoch)
+        train_loss = train_one_epoch(model, train_loader, criterion, optimizer, scheduler, device, epoch)
         val_loss = validate(model, val_loader, criterion, device, epoch)
-
         early_stopper.step(val_loss, model)
+
+        print(f"[Epoch {epoch}] train loss: {train_loss:.4f} | val loss: {val_loss:.4f}")
 
         if early_stopper.early_stop:
             break
+
+    return early_stopper.best_score
