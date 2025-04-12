@@ -1,7 +1,7 @@
 import os
 import torch
 import torch.nn as nn
-from torch.optim import Adam
+from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
 from torch.nn.functional import log_softmax
 from tqdm import tqdm
@@ -57,7 +57,7 @@ def train(model, train_loader, val_loader, num_epochs=100, lr=1e-3, warmup_steps
     os.makedirs(save_path, exist_ok=True)
 
     model = model.to(device)
-    optimizer = Adam(model.parameters(), lr=lr)
+    optimizer = AdamW(model.parameters(), lr=lr)
     scheduler = get_warmup_scheduler(optimizer, warmup_steps=warmup_steps)
     criterion = nn.CTCLoss(blank=0, zero_infinity=True)
 

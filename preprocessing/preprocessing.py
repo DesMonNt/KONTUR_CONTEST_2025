@@ -51,4 +51,4 @@ def encode_to_morse(text):
     return ' '.join(morse_dict.get(ch.upper(), '?') for ch in text)
 
 def decode_from_morse(morse_code):
-    return ''.join(reverse_morse_dict.get(code, '?') for code in morse_code.split())
+    return ''.join(reverse_morse_dict.get(code, '') for code in morse_code.split())
