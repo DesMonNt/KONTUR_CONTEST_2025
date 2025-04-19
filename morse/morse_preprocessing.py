@@ -4,7 +4,7 @@ import torchaudio
 
 
 class MorsePreprocessing(nn.Module):
-    def __init__(self, sr=8000, window_duration=0.02, n_fft=1024, hop_length=256, power=2.0, alpha=0.1, margin=5):
+    def __init__(self, n_fft=1024, hop_length=256, power=2.0, alpha=0.1, margin=5):
         super().__init__()
         self.spectrogram = torchaudio.transforms.Spectrogram(
             n_fft=n_fft,
