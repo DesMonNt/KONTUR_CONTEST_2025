@@ -16,7 +16,11 @@ class MorseConformer(nn.Module):
     ):
         super().__init__()
 
-        self.encoder = nn.Conv1d(input_dim, embedding_dim, kernel_size=3, padding=1)
+        self.encoder = nn.Sequential(
+            nn.Conv1d(input_dim, embedding_dim, kernel_size=3, padding=1),
+            nn.BatchNorm1d(embedding_dim),
+            nn.ReLU(),
+        )
 
         self.conformer = Conformer(
             input_dim=embedding_dim,
