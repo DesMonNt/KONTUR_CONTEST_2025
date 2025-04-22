@@ -34,15 +34,14 @@ class MorseConformer(nn.Module):
         self.fc = nn.Linear(embedding_dim, output_dim)
 
     def forward(self, x, lengths=None):
-        # x shape: (B, T, F)
-        x = x.transpose(1, 2)  # (B, F, T)
-        x = self.encoder(x)  # (B, embedding_dim, T)
-        x = x.transpose(1, 2)  # (B, T, embedding_dim)
+        x = x.transpose(1, 2)
+        x = self.encoder(x)
+        x = x.transpose(1, 2)
 
         if lengths is None:
             lengths = torch.full((x.shape[0],), x.shape[1], dtype=torch.long, device=x.device)
 
-        x, _ = self.conformer(x, lengths)  # (B, T, embedding_dim)
-        x = self.fc(x)  # (B, T, output_dim)
+        x, _ = self.conformer(x, lengths)
+        x = self.fc(x)
 
-        return x.transpose(0, 1)  # (T, B, output_dim) — для CTC
+        return x.transpose(0, 1)

@@ -15,13 +15,13 @@ class PreprocessedDataset(Dataset):
         return len(self.paths)
 
     def __getitem__(self, idx):
-        mel, label = torch.load(self.paths[idx])
+        spec, label = torch.load(self.paths[idx])
 
         if self.transform:
-            mel = self.transform(mel)
+            spec = self.transform(spec)
 
-        input_length = mel.shape[-1]
-        label_tensor = torch.tensor([self.char2idx[c] for c in label], dtype=torch.long)
-        target_length = len(label_tensor)
+        input_length = spec.shape[-1]
+        label = torch.tensor([self.char2idx[c] for c in label], dtype=torch.long)
+        target_length = len(label)
 
-        return mel, label_tensor, input_length, target_length
+        return spec, label, input_length, target_length
